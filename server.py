@@ -5,7 +5,7 @@ from http import HTTPStatus
 logging.basicConfig(level=logging.DEBUG)
 
 HOST = "127.0.0.1"
-PORT = 10998
+PORT = 10991
 BUFFER = 1024
 
 
@@ -34,10 +34,16 @@ def parse_data(r_data: str) -> dict:
 
 
 def generate_response(r_data: dict) -> str:
+    header = f"HTTP/1.1 {r_data['status_code']} {r_data['status_name']}\r\n"
     method = f"Request Method: {r_data['method']}\r\n"
     source = f"Request Source: ('{r_data['request_source'][0]}',{r_data['request_source'][1]})\r\n"
     status = f"Response Status: {r_data['status_code']} {r_data['status_name']}\r\n"
-    return f"{method}{source}{status}{r_data['headers']}"
+    return f"{header}{method}{source}{status}{r_data['headers']}"
+
+
+def generate_html(resp: str):
+    body = ''.join([f'<br /> {line}' for line in resp.split('\r\n')[1:]])
+    return f'<html>{body}</html>'
 
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -53,6 +59,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             data = data.decode("utf-8")
             data = parse_data(data)
             response = generate_response(data)
+            response = f'{response}{generate_html(response)}'
             conn.send(response.encode("utf-8"))
             logging.info(f"Sent '{response}' to {addr}")
             conn.close()
